@@ -36,11 +36,13 @@ router.patch('/users/push-token', authMiddleware, validate(pushTokenSchema), use
 router.get('/users/search', authMiddleware, userController.searchByPhone);
 
 router.get('/drivers/nearby', authMiddleware, rideController.nearby);
+router.get('/drivers/requests', authMiddleware, requireRole('DRIVER'), rideController.incomingRequests);
 
 router.post('/rides', authMiddleware, requireRole('RIDER'), validate(createRideSchema), rideController.create);
 router.get('/rides', authMiddleware, rideController.list);
 router.get('/rides/:id', authMiddleware, rideController.getById);
 router.post('/rides/:id/accept', authMiddleware, requireRole('DRIVER'), rideController.accept);
+router.post('/rides/:id/decline', authMiddleware, requireRole('DRIVER'), rideController.decline);
 router.patch('/rides/:id/status', authMiddleware, rideController.updateStatus);
 router.post('/rides/:id/box/approve', authMiddleware, validate(boxApproveSchema), rideController.approveBox);
 router.post('/rides/:id/box/reject', authMiddleware, rideController.rejectBox);

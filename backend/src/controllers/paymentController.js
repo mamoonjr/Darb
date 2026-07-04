@@ -15,7 +15,9 @@ async function pay(req, res) {
       req.user.id,
       req.user.role
     );
-    req.app.get('io')?.emit('ride:requested', ride);
+    if (ride.status === 'REQUESTED') {
+      await rideService.offerRideToNearbyDrivers(ride, req.app.get('io'));
+    }
     notifyRideStatus(ride, 'REQUESTED');
     res.json({ payment, ride });
   } catch (err) {

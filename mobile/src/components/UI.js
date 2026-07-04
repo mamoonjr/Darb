@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useLanguage } from '../context/LanguageContext';
 import { COLORS } from '../constants';
 
 export function Button({ title, onPress, variant = 'primary', loading, disabled, style }) {
@@ -32,11 +33,12 @@ export function Button({ title, onPress, variant = 'primary', loading, disabled,
 }
 
 export function Input({ label, value, onChangeText, placeholder, secureTextEntry, keyboardType }) {
+  const { textAlign } = useLanguage();
   return (
     <View style={styles.inputGroup}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <Text style={[styles.label, { textAlign }]}>{label}</Text> : null}
       <TextInput
-        style={styles.input}
+        style={[styles.input, { textAlign }]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -53,7 +55,8 @@ export function Card({ children, style }) {
 }
 
 export function Screen({ children, style }) {
-  return <View style={[styles.screen, style]}>{children}</View>;
+  const { direction } = useLanguage();
+  return <View style={[styles.screen, { direction }, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -73,7 +76,7 @@ const styles = StyleSheet.create({
   text: { color: '#fff', fontSize: 16, fontWeight: '600' },
   outlineText: { color: COLORS.primary },
   inputGroup: { marginBottom: 16 },
-  label: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 6, textAlign: 'right' },
+  label: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 6 },
   input: {
     backgroundColor: COLORS.surface,
     borderWidth: 1,
@@ -83,7 +86,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: COLORS.text,
-    textAlign: 'right',
   },
   card: {
     backgroundColor: COLORS.surface,

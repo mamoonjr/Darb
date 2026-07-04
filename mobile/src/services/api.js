@@ -56,7 +56,9 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
 
-    throw new Error(data.error || 'Request failed');
+    const err = new Error(data.error || 'Request failed');
+    if (data.code) err.code = data.code;
+    throw err;
 
   }
 
@@ -93,6 +95,9 @@ export const api = {
   getNearbyDrivers: (lat, lng, radius) =>
     request(`/drivers/nearby?lat=${lat}&lng=${lng}${radius ? `&radius=${radius}` : ''}`),
 
+  getDriverRequests: (lat, lng) =>
+    request(`/drivers/requests?lat=${lat}&lng=${lng}`),
+
   createRide: (body) => request('/rides', { method: 'POST', body: JSON.stringify(body) }),
 
   getRides: () => request('/rides'),
@@ -100,6 +105,8 @@ export const api = {
   getRide: (id) => request(`/rides/${id}`),
 
   acceptRide: (id) => request(`/rides/${id}/accept`, { method: 'POST' }),
+
+  declineRide: (id) => request(`/rides/${id}/decline`, { method: 'POST' }),
 
   updateRideStatus: (id, status) =>
 

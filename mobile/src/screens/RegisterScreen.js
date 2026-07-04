@@ -4,10 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { Button, Input, Screen } from '../components/UI';
 import { COLORS } from '../constants';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function RegisterScreen({ navigation }) {
   const { t } = useTranslation();
   const { register } = useAuth();
+  const { textAlign, row } = useLanguage();
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -34,14 +36,14 @@ export default function RegisterScreen({ navigation }) {
 
   return (
     <Screen>
-      <Text style={styles.title}>{t('createAccount')}</Text>
+      <Text style={[styles.title, { textAlign }]}>{t('createAccount')}</Text>
 
       <Input label={t('name')} value={form.name} onChangeText={(v) => update('name', v)} />
       <Input label={t('email')} value={form.email} onChangeText={(v) => update('email', v)} keyboardType="email-address" />
       <Input label={t('phone')} value={form.phone} onChangeText={(v) => update('phone', v)} keyboardType="phone-pad" />
       <Input label={t('password')} value={form.password} onChangeText={(v) => update('password', v)} secureTextEntry />
 
-      <View style={styles.roleRow}>
+      <View style={[styles.roleRow, row]}>
         <TouchableOpacity
           style={[styles.roleBtn, form.role === 'RIDER' && styles.roleActive]}
           onPress={() => update('role', 'RIDER')}
@@ -66,8 +68,8 @@ export default function RegisterScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '700', color: COLORS.text, marginBottom: 24, textAlign: 'right' },
-  roleRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  title: { fontSize: 28, fontWeight: '700', color: COLORS.text, marginBottom: 24 },
+  roleRow: { gap: 12, marginBottom: 16 },
   roleBtn: {
     flex: 1,
     padding: 12,

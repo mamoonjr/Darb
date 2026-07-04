@@ -11,6 +11,7 @@ import { getCurrentLocation, reverseGeocode, useDriverLocationTracking } from '.
 import { api } from '../services/api';
 import { getSocket, joinRide, leaveRide } from '../services/socket';
 import { statusKey } from '../utils/status';
+import { localizeApiError } from '../utils/errors';
 
 export default function RideDetailScreen({ route, navigation }) {
   const { rideId } = route.params;
@@ -76,7 +77,7 @@ export default function RideDetailScreen({ route, navigation }) {
         setShowRating(true);
       }
     } catch (err) {
-      Alert.alert(t('error'), err.message);
+      Alert.alert(t('error'), localizeApiError(err, t));
     } finally {
       setLoading(false);
     }

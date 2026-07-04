@@ -16,6 +16,9 @@ const CARPOOL_DROPOFF_THRESHOLD_KM = 2.0;
 const CARPOOL_BEARING_THRESHOLD_DEG = 45; // "same direction" tolerance
 const DEFAULT_CARPOOL_SEATS = 4;
 
+// Drivers who dismissed an offer — in-memory per modular-monolith spec.
+const driverDeclinedOffers = new Map(); // driverId -> Set<rideId>
+
 const ACTIVE_STATUSES = [
   'PENDING_RECEIVER_APPROVAL',
   'REQUESTED',
@@ -378,15 +381,7 @@ async function getRideById(rideId, userId, role) {
 async function getUserRides(userId, role) {
   const where =
     role === 'DRIVER'
-      ? {
-          OR: [
-            { driverId: userId },
-            // Paid single/box rides open for acceptance
-            { driverId: null, status: 'REQUESTED', payment: { status: 'PAID' } },
-            // Carpool rides are open for acceptance without upfront full payment
-            { driverId: null, status: 'REQUESTED', rideType: 'CARPOOL' },
-          ],
-        }
+      ? { driverId: userId }
       : {
           OR: [
             { riderId: userId },
@@ -401,6 +396,72 @@ async function getUserRides(userId, role) {
     orderBy: { createdAt: 'desc' },
     take: 50,
   });
+}
+
+// Open ride requests near an online driver (pickup within radius).
+async function getDriverIncomingRequests(driverId, lat, lng, radiusKm = NEARBY_RADIUS_KM) {
+  if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) {
+    return [];
+  }
+
+  const profile = await prisma.driverProfile.findUnique({ where: { userId: driverId } });
+  if (!profile?.isAvailable) return [];
+
+  const box = boundingBox(lat, lng, radiusKm);
+  const declined = driverDeclinedOffers.get(driverId) || new Set();
+
+  const rides = await prisma.ride.findMany({
+    where: {
+      driverId: null,
+      status: 'REQUESTED',
+      pickupLat: { gte: box.minLat, lte: box.maxLat },
+      pickupLng: { gte: box.minLng, lte: box.maxLng },
+      OR: [{ rideType: 'CARPOOL' }, { payment: { status: 'PAID' } }],
+    },
+    include: rideInclude,
+    orderBy: { createdAt: 'desc' },
+    take: 30,
+  });
+
+  return rides
+    .filter((r) => !declined.has(r.id))
+    .map((r) => ({
+      ...r,
+      distanceKm: calculateDistance(lat, lng, r.pickupLat, r.pickupLng),
+    }))
+    .filter((r) => r.distanceKm <= radiusKm)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+}
+
+function declineRideOffer(rideId, driverId) {
+  if (!driverDeclinedOffers.has(driverId)) {
+    driverDeclinedOffers.set(driverId, new Set());
+  }
+  driverDeclinedOffers.get(driverId).add(rideId);
+}
+
+async function offerRideToNearbyDrivers(ride, io) {
+  if (!ride || ride.status !== 'REQUESTED' || ride.driverId) return;
+
+  const isPayable =
+    ride.rideType === 'CARPOOL' || ride.payment?.status === 'PAID';
+  if (!isPayable) return;
+
+  const { notifyDriverRideOffer } = require('./notificationService');
+  const nearby = await getNearbyDrivers(ride.pickupLat, ride.pickupLng);
+
+  for (const d of nearby) {
+    if (driverDeclinedOffers.get(d.driverId)?.has(ride.id)) continue;
+    await notifyDriverRideOffer(d.driverId, ride, d.distanceKm);
+    io?.to(`user:${d.driverId}`).emit('ride:offer', {
+      ...ride,
+      distanceKm: d.distanceKm,
+    });
+  }
+}
+
+function closeRideOffer(rideId, io) {
+  io?.emit('ride:offer:closed', { rideId });
 }
 
 // ---------------------------------------------------------------------------
@@ -441,6 +502,51 @@ async function getNearbyDrivers(lat, lng, radiusKm = NEARBY_RADIUS_KM) {
 // Lifecycle transitions
 // ---------------------------------------------------------------------------
 
+const DRIVER_BUSY_STATUSES = ['ACCEPTED', 'DRIVER_ARRIVED', 'IN_PROGRESS'];
+
+async function getActiveRidesForDriver(driverId) {
+  return prisma.ride.findMany({
+    where: {
+      driverId,
+      status: { in: DRIVER_BUSY_STATUSES },
+    },
+    select: { id: true, rideType: true, status: true },
+    orderBy: { createdAt: 'asc' },
+  });
+}
+
+// A driver may hold at most one active ride, unless pairing CARPOOL + BOX_DELIVERY.
+function canDriverAcceptWhileBusy(activeRides, incomingType) {
+  if (activeRides.length === 0) return true;
+  if (activeRides.length >= 2) return false;
+  if (incomingType === 'SINGLE') return false;
+
+  const activeType = activeRides[0].rideType;
+  if (activeType === 'SINGLE') return false;
+  if (activeType === incomingType) return false;
+
+  const types = new Set([activeType, incomingType]);
+  return types.has('CARPOOL') && types.has('BOX_DELIVERY');
+}
+
+async function assertDriverCanAccept(driverId, incomingRideType) {
+  const active = await getActiveRidesForDriver(driverId);
+  if (canDriverAcceptWhileBusy(active, incomingRideType)) return;
+
+  let code = 'DRIVER_DUAL_ONLY_BOX_CARPOOL';
+  if (active.length >= 2) code = 'DRIVER_MAX_ACTIVE_RIDES';
+  else if (incomingRideType === 'SINGLE' || active[0]?.rideType === 'SINGLE') code = 'DRIVER_BUSY_SINGLE';
+
+  const messages = {
+    DRIVER_MAX_ACTIVE_RIDES: 'Driver already has the maximum active rides',
+    DRIVER_BUSY_SINGLE: 'Finish your current ride before accepting another',
+    DRIVER_DUAL_ONLY_BOX_CARPOOL:
+      'You can only run two rides together when one is carpool and one is a package delivery',
+  };
+
+  throw Object.assign(new Error(messages[code]), { status: 409, code });
+}
+
 async function acceptRide(rideId, driverId) {
   const ride = await prisma.ride.findUnique({
     where: { id: rideId },
@@ -461,6 +567,8 @@ async function acceptRide(rideId, driverId) {
   if (!driver || !driver.roles.includes('DRIVER') || !driver.driverProfile?.isAvailable) {
     throw Object.assign(new Error('Driver not available'), { status: 400 });
   }
+
+  await assertDriverCanAccept(driverId, ride.rideType);
 
   await prisma.ride.update({
     where: { id: rideId },
@@ -536,18 +644,18 @@ async function updateDriverAvailability(driverId, isAvailable) {
 }
 
 async function getActiveRideForDriver(driverId) {
-  return prisma.ride.findFirst({
-    where: {
-      driverId,
-      status: { in: ['ACCEPTED', 'DRIVER_ARRIVED', 'IN_PROGRESS'] },
-    },
-  });
+  const rides = await getActiveRidesForDriver(driverId);
+  return rides[0] || null;
 }
 
 module.exports = {
   createRide,
   getRideById,
   getUserRides,
+  getDriverIncomingRequests,
+  declineRideOffer,
+  offerRideToNearbyDrivers,
+  closeRideOffer,
   getNearbyDrivers,
   acceptRide,
   updateRideStatus,
@@ -557,5 +665,6 @@ module.exports = {
   updateDriverLocation,
   updateDriverAvailability,
   getActiveRideForDriver,
+  getActiveRidesForDriver,
   NEARBY_RADIUS_KM,
 };

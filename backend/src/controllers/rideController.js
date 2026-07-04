@@ -15,8 +15,7 @@ async function create(req, res) {
       // Rider joined an existing carpool
       io?.to(`ride:${ride.id}`).emit('ride:updated', ride);
     } else if (ride.status === 'REQUESTED') {
-      // New ride open for drivers to accept
-      io?.emit('ride:requested', ride);
+      await rideService.offerRideToNearbyDrivers(ride, io);
     }
 
     if (pendingApproval && ride.receiverId) {
@@ -77,12 +76,13 @@ async function accept(req, res) {
   try {
     const ride = await rideService.acceptRide(req.params.id, req.user.id);
     const io = req.app.get('io');
+    rideService.closeRideOffer(ride.id, io);
     io?.to(`ride:${ride.id}`).emit('ride:updated', ride);
     io?.emit('ride:accepted', ride);
     notifyRideStatus(ride, 'ACCEPTED');
     res.json(ride);
   } catch (err) {
-    res.status(err.status || 500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message, code: err.code });
   }
 }
 
@@ -103,11 +103,34 @@ async function updateStatus(req, res) {
   }
 }
 
+async function incomingRequests(req, res) {
+  try {
+    const lat = parseFloat(req.query.lat);
+    const lng = parseFloat(req.query.lng);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      return res.status(400).json({ error: 'lat and lng query params are required' });
+    }
+    const rides = await rideService.getDriverIncomingRequests(req.user.id, lat, lng);
+    res.json({ rides, radiusKm: rideService.NEARBY_RADIUS_KM });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+async function decline(req, res) {
+  try {
+    rideService.declineRideOffer(req.params.id, req.user.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
 async function approveBox(req, res) {
   try {
     const ride = await rideService.approveBoxDelivery(req.params.id, req.user.id, req.body);
     const io = req.app.get('io');
-    io?.emit('ride:requested', ride);
+    await rideService.offerRideToNearbyDrivers(ride, io);
     io?.to(`ride:${ride.id}`).emit('ride:updated', ride);
     notifyRideStatus(ride, 'REQUESTED');
     res.json(ride);
@@ -148,16 +171,16 @@ async function updateLocation(req, res) {
       req.body.lat,
       req.body.lng
     );
-    const activeRide = await rideService.getActiveRideForDriver(req.user.id);
+    const activeRides = await rideService.getActiveRidesForDriver(req.user.id);
     const payload = {
       driverId: req.user.id,
       lat: req.body.lat,
       lng: req.body.lng,
-      rideId: activeRide?.id,
+      rideId: activeRides[0]?.id,
     };
     const io = req.app.get('io');
-    if (activeRide) {
-      io?.to(`ride:${activeRide.id}`).emit('driver:location', payload);
+    for (const ride of activeRides) {
+      io?.to(`ride:${ride.id}`).emit('driver:location', { ...payload, rideId: ride.id });
     }
     // Fan out to nearby riders for the live-proximity map.
     io?.emit('driver:location', payload);
@@ -187,6 +210,8 @@ module.exports = {
   list,
   getById,
   nearby,
+  incomingRequests,
+  decline,
   accept,
   updateStatus,
   approveBox,

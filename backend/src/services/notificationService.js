@@ -58,6 +58,24 @@ const RIDE_MESSAGES = {
   CANCELLED: { title: 'تم إلغاء الرحلة', titleEn: 'Ride cancelled' },
 };
 
+async function notifyDriverRideOffer(driverId, ride, distanceKm) {
+  const typeLabel =
+    ride.rideType === 'BOX_DELIVERY'
+      ? 'درب بوكس'
+      : ride.rideType === 'CARPOOL'
+        ? 'مشاركة'
+        : 'رحلة';
+  await notifyUser(
+    driverId,
+    {
+      title: 'طلب قريب منك',
+      body: `${typeLabel} على بعد ${distanceKm.toFixed(1)} كم — ${ride.pickupAddress}`,
+      data: { rideId: ride.id, type: 'RIDE_OFFER', distanceKm },
+    },
+    { rideId: ride.id, type: 'RIDE_OFFER' }
+  );
+}
+
 async function notifyRideStatus(ride, status) {
   const msg = RIDE_MESSAGES[status];
   if (!msg) return;
@@ -87,4 +105,5 @@ module.exports = {
   notifyUser,
   notifyRideStatus,
   notifyBoxReceiver,
+  notifyDriverRideOffer,
 };
