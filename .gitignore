@@ -30,6 +30,9 @@ web-build/
 backend/prisma/dev.db
 backend/prisma/dev.db-journal
 
+# Runtime uploads (proof-of-delivery images) — regenerated at runtime
+backend/uploads/
+
 # Logs
 *.log
 npm-debug.*

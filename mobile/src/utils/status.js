@@ -1,5 +1,6 @@
 export function statusKey(status) {
   const map = {
+    PENDING_RECEIVER_APPROVAL: 'pendingReceiverApproval',
     REQUESTED: 'requested',
     ACCEPTED: 'accepted',
     DRIVER_ARRIVED: 'driverArrived',

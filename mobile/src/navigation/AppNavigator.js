@@ -7,6 +7,7 @@ import HomeScreen from '../screens/HomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import PaymentScreen from '../screens/PaymentScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import ReceiverRequestsScreen from '../screens/ReceiverRequestsScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import RideDetailScreen from '../screens/RideDetailScreen';
 
@@ -49,6 +50,7 @@ function MainStack() {
       />
       <Stack.Screen name="RideDetail" component={RideDetailScreen} options={{ title: t('activeRide') }} />
       <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: t('payment') }} />
+      <Stack.Screen name="ReceiverRequests" component={ReceiverRequestsScreen} options={{ title: t('incomingPackages') }} />
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: t('profile') }} />
     </Stack.Navigator>
   );

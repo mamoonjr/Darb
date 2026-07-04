@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Button, Card, Screen } from '../components/UI';
 import { COLORS } from '../constants';
@@ -7,7 +7,26 @@ import { useAuth } from '../context/AuthContext';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
+  const { user, logout, switchRole } = useAuth();
+  const [switching, setSwitching] = useState(false);
+
+  const activeRole = user?.activeRole || user?.role;
+  const isAdmin = activeRole === 'ADMIN';
+  const targetRole = activeRole === 'DRIVER' ? 'RIDER' : 'DRIVER';
+  // Only offer switching to roles the user actually owns.
+  const canSwitch = !isAdmin && (user?.roles || []).includes(targetRole);
+
+  async function handleSwitch() {
+    setSwitching(true);
+    try {
+      await switchRole(targetRole);
+      Alert.alert(t('roleSwitched'), targetRole === 'DRIVER' ? t('roleDriver') : t('roleRider'));
+    } catch (err) {
+      Alert.alert(t('error'), err.message);
+    } finally {
+      setSwitching(false);
+    }
+  }
 
   return (
     <Screen>
@@ -18,7 +37,7 @@ export default function ProfileScreen() {
         <Text style={styles.meta}>{user?.email}</Text>
         <Text style={styles.meta}>{user?.phone}</Text>
         <Text style={styles.role}>
-          {user?.role === 'DRIVER' ? t('roleDriver') : t('roleRider')}
+          {activeRole === 'DRIVER' ? t('roleDriver') : activeRole === 'ADMIN' ? 'Admin' : t('roleRider')}
         </Text>
       </Card>
 
@@ -32,6 +51,17 @@ export default function ProfileScreen() {
           <Text style={[styles.badge, user.driverProfile.isAvailable ? styles.online : styles.offline]}>
             {user.driverProfile.isAvailable ? t('available') : t('unavailable')}
           </Text>
+        </Card>
+      )}
+
+      {canSwitch && (
+        <Card>
+          <Text style={styles.label}>{t('accountMode')}</Text>
+          <Button
+            title={targetRole === 'DRIVER' ? t('switchToDriver') : t('switchToRider')}
+            onPress={handleSwitch}
+            loading={switching}
+          />
         </Card>
       )}
 

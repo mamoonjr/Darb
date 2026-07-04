@@ -30,8 +30,23 @@ async function notifyUser(userId, message, data = {}) {
     select: { pushToken: true },
   });
   if (user?.pushToken) {
-    await sendPush(user.pushToken, message);
+    await sendPush(user.pushToken, { ...message, data: { ...message.data, ...data } });
   }
+}
+
+// Notify a registered receiver that a package is on the way and needs their
+// approval + current GPS location before a driver is dispatched.
+async function notifyBoxReceiver(ride) {
+  if (!ride.receiverId) return;
+  await notifyUser(
+    ride.receiverId,
+    {
+      title: 'طرد جديد بانتظار موافقتك',
+      body: `أرسل لك ${ride.rider?.name || 'مستخدم'} طرداً عبر درب بوكس. وافق وشارك موقعك للاستلام.`,
+      data: { rideId: ride.id, type: 'BOX_APPROVAL' },
+    },
+    { rideId: ride.id, type: 'BOX_APPROVAL' }
+  );
 }
 
 const RIDE_MESSAGES = {
@@ -67,4 +82,9 @@ async function notifyRideStatus(ride, status) {
   );
 }
 
-module.exports = { sendPush, notifyUser, notifyRideStatus };
+module.exports = {
+  sendPush,
+  notifyUser,
+  notifyRideStatus,
+  notifyBoxReceiver,
+};

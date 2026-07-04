@@ -53,8 +53,21 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  // Switch active role (RIDER <-> DRIVER). The server returns a fresh token
+  // whose claims reflect the new active role, so we re-issue and reconnect.
+  async function switchRole(role) {
+    const { user: profile, token } = await api.switchRole(role);
+    await api.setToken(token);
+    setUser(profile);
+    disconnectSocket();
+    await connectSocket();
+    return profile;
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, setUser }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, logout, setUser, switchRole }}
+    >
       {children}
     </AuthContext.Provider>
   );

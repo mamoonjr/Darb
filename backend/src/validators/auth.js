@@ -17,13 +17,43 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-const createRideSchema = z.object({
-  pickupAddress: z.string().min(3),
-  pickupLat: z.number(),
-  pickupLng: z.number(),
-  dropoffAddress: z.string().min(3),
-  dropoffLat: z.number(),
-  dropoffLng: z.number(),
+const createRideSchema = z
+  .object({
+    rideType: z.enum(['SINGLE', 'CARPOOL', 'BOX_DELIVERY']).default('SINGLE'),
+    pickupAddress: z.string().min(3),
+    pickupLat: z.number(),
+    pickupLng: z.number(),
+    dropoffAddress: z.string().min(3).optional(),
+    dropoffLat: z.number().optional(),
+    dropoffLng: z.number().optional(),
+    // Carpooling
+    seats: z.number().int().min(1).max(6).optional(),
+    totalSeats: z.number().int().min(1).max(6).optional(),
+    // Darb Box
+    receiverPhone: z.string().min(6).optional(),
+    receiverName: z.string().max(120).optional(),
+    packageDesc: z.string().max(300).optional(),
+  })
+  .refine(
+    (d) =>
+      d.rideType === 'BOX_DELIVERY'
+        ? !!d.receiverPhone
+        : d.dropoffLat != null && d.dropoffLng != null && !!d.dropoffAddress,
+    { message: 'Missing required fields for the selected ride type' }
+  );
+
+const switchRoleSchema = z.object({
+  role: z.enum(['RIDER', 'DRIVER']),
+});
+
+const boxApproveSchema = z.object({
+  lat: z.number(),
+  lng: z.number(),
+  address: z.string().min(3).optional(),
+});
+
+const deliveryProofSchema = z.object({
+  image: z.string().min(16), // base64 data URL of the captured photo
 });
 
 const updateLocationSchema = z.object({
@@ -52,6 +82,9 @@ module.exports = {
   registerSchema,
   loginSchema,
   createRideSchema,
+  switchRoleSchema,
+  boxApproveSchema,
+  deliveryProofSchema,
   updateLocationSchema,
   updateAvailabilitySchema,
   paymentSchema,

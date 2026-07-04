@@ -15,9 +15,13 @@ function authMiddleware(req, res, next) {
   }
 }
 
+// Guards a route by the caller's ACTIVE role. The token's `role` claim always
+// mirrors `activeRole`, so a user who switched to DRIVER passes DRIVER guards
+// and loses RIDER-only access until they switch back.
 function requireRole(...roles) {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    const active = req.user.activeRole || req.user.role;
+    if (!roles.includes(active)) {
       return res.status(403).json({ error: 'Forbidden' });
     }
     next();

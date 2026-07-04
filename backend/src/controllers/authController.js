@@ -27,4 +27,13 @@ async function me(req, res) {
   }
 }
 
-module.exports = { register, login, me };
+async function switchRole(req, res) {
+  try {
+    const result = await authService.switchRole(req.user.id, req.body.role);
+    res.json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+module.exports = { register, login, me, switchRole };

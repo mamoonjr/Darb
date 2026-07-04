@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const { port, corsOrigin } = require('./config');
 const routes = require('./routes');
 const { setupSocket } = require('./socket');
+const { UPLOAD_DIR } = require('./services/uploadService');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,7 +18,10 @@ app.set('io', io);
 setupSocket(io);
 
 app.use(cors({ origin: corsOrigin === '*' ? true : corsOrigin }));
-app.use(express.json());
+// Larger limit so base64 proof-of-delivery photos fit in the JSON body.
+app.use(express.json({ limit: '12mb' }));
+// Serve uploaded proof-of-delivery images.
+app.use('/uploads', express.static(UPLOAD_DIR));
 app.use('/api', routes);
 
 app.use((_req, res) => {

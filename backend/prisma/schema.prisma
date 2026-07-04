@@ -13,7 +13,14 @@ enum Role {
   ADMIN
 }
 
+enum RideType {
+  SINGLE
+  CARPOOL
+  BOX_DELIVERY
+}
+
 enum RideStatus {
+  PENDING_RECEIVER_APPROVAL
   REQUESTED
   ACCEPTED
   DRIVER_ARRIVED
@@ -30,22 +37,26 @@ enum PaymentStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  phone     String   @unique
-  name      String
-  password  String
-  role      Role     @default(RIDER)
-  avatar    String?
-  pushToken String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  email      String   @unique
+  phone      String   @unique
+  name       String
+  password   String
+  role       Role     @default(RIDER)
+  roles      Role[]   @default([RIDER])
+  activeRole Role     @default(RIDER)
+  avatar     String?
+  pushToken  String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  driverProfile DriverProfile?
-  ridesAsRider  Ride[]         @relation("RiderRides")
-  ridesAsDriver Ride[]         @relation("DriverRides")
-  reviewsGiven  Review[]       @relation("ReviewsGiven")
+  driverProfile   DriverProfile?
+  ridesAsRider    Ride[]          @relation("RiderRides")
+  ridesAsDriver   Ride[]          @relation("DriverRides")
+  ridesAsReceiver Ride[]          @relation("ReceiverRides")
+  reviewsGiven    Review[]        @relation("ReviewsGiven")
+  ridePassengers  RidePassenger[]
 }
 
 model DriverProfile {
@@ -69,6 +80,7 @@ model Ride {
   rider            User       @relation("RiderRides", fields: [riderId], references: [id])
   driverId         String?
   driver           User?      @relation("DriverRides", fields: [driverId], references: [id])
+  rideType         RideType   @default(SINGLE)
   status           RideStatus @default(REQUESTED)
   pickupAddress    String
   pickupLat        Float
@@ -79,12 +91,46 @@ model Ride {
   fare             Float?
   distance         Float?
   estimatedMinutes Int?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  completedAt      DateTime?
 
-  payment Payment?
-  review  Review?
+  // Carpooling
+  totalSeats     Int @default(1)
+  availableSeats Int @default(1)
+
+  // Darb Box (package delivery)
+  receiverId       String?
+  receiver         User?   @relation("ReceiverRides", fields: [receiverId], references: [id])
+  receiverPhone    String?
+  receiverName     String?
+  packageDesc      String?
+  deliveryProofUrl String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  payment    Payment?
+  review     Review?
+  passengers RidePassenger[]
+}
+
+model RidePassenger {
+  id             String   @id @default(cuid())
+  rideId         String
+  ride           Ride     @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  seats          Int      @default(1)
+  pickupAddress  String
+  pickupLat      Float
+  pickupLng      Float
+  dropoffAddress String
+  dropoffLat     Float
+  dropoffLng     Float
+  fareShare      Float?
+  paid           Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@unique([rideId, userId])
 }
 
 model Payment {

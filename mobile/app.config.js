@@ -38,6 +38,8 @@ module.exports = {
           'Darb needs your location to show pickup/dropoff and track rides.',
         NSLocationAlwaysAndWhenInUseUsageDescription:
           'Darb needs your location to track active rides.',
+        NSCameraUsageDescription:
+          'Darb needs camera access to capture proof of delivery for Darb Box.',
       },
       ...(hasMapsKey && {
         config: { googleMapsApiKey: mapsApiKey },
@@ -52,6 +54,7 @@ module.exports = {
       permissions: [
         'ACCESS_FINE_LOCATION',
         'ACCESS_COARSE_LOCATION',
+        'CAMERA',
         'RECEIVE_BOOT_COMPLETED',
         'VIBRATE',
       ],
@@ -74,6 +77,13 @@ module.exports = {
         {
           icon: './assets/icon.png',
           color: '#1a73e8',
+        },
+      ],
+      [
+        'expo-image-picker',
+        {
+          cameraPermission:
+            'Darb needs camera access to capture proof of delivery for Darb Box.',
         },
       ],
     ],

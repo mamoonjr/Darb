@@ -80,9 +80,18 @@ export const api = {
 
   me: () => request('/auth/me'),
 
+  switchRole: (role) =>
+    request('/auth/switch-role', { method: 'POST', body: JSON.stringify({ role }) }),
+
   updatePushToken: (pushToken) =>
 
     request('/users/push-token', { method: 'PATCH', body: JSON.stringify({ pushToken }) }),
+
+  searchUserByPhone: (phone) =>
+    request(`/users/search?phone=${encodeURIComponent(phone)}`),
+
+  getNearbyDrivers: (lat, lng, radius) =>
+    request(`/drivers/nearby?lat=${lat}&lng=${lng}${radius ? `&radius=${radius}` : ''}`),
 
   createRide: (body) => request('/rides', { method: 'POST', body: JSON.stringify(body) }),
 
@@ -95,6 +104,14 @@ export const api = {
   updateRideStatus: (id, status) =>
 
     request(`/rides/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+
+  approveBox: (id, location) =>
+    request(`/rides/${id}/box/approve`, { method: 'POST', body: JSON.stringify(location) }),
+
+  rejectBox: (id) => request(`/rides/${id}/box/reject`, { method: 'POST' }),
+
+  uploadDeliveryProof: (id, image) =>
+    request(`/rides/${id}/proof`, { method: 'POST', body: JSON.stringify({ image }) }),
 
   payRide: (id, paymentMethod) =>
 

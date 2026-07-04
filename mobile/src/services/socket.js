@@ -38,3 +38,18 @@ export function leaveRide(rideId) {
 export function emitDriverLocation(rideId, lat, lng) {
   socket?.emit('driver:location', { rideId, lat, lng });
 }
+
+// Rider tells the server where it is so it keeps receiving nearby-driver updates.
+export function emitRiderLocation(lat, lng) {
+  socket?.emit('rider:location', { lat, lng });
+}
+
+// Request a one-shot snapshot of available drivers within `radius` km.
+export function requestNearbyDrivers(lat, lng, radius) {
+  return new Promise((resolve) => {
+    if (!socket) return resolve([]);
+    socket.emit('drivers:nearby', { lat, lng, radius }, (res) => {
+      resolve(res?.drivers || []);
+    });
+  });
+}

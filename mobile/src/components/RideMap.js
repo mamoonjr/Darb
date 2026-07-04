@@ -1,22 +1,19 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { COLORS } from '../constants';
-
-const DEFAULT_REGION = {
-  latitude: 24.7136,
-  longitude: 46.6753,
-  latitudeDelta: 0.05,
-  longitudeDelta: 0.05,
-};
+import { COLORS, JORDAN_REGION } from '../constants';
+import CarMarker from './CarMarker';
 
 export default function RideMap({
   pickup,
   dropoff,
   driverLocation,
+  nearbyDrivers = [],
   showRoute = true,
   onMapPress,
   selecting = null,
+  pickupTitle = 'Pickup',
+  dropoffTitle = 'Dropoff',
   style,
 }) {
   const mapRef = useRef(null);
@@ -25,7 +22,7 @@ export default function RideMap({
     const coords = [pickup, dropoff, driverLocation].filter(
       (c) => c?.lat != null && c?.lng != null
     );
-    if (coords.length > 0 && mapRef.current) {
+    if (coords.length >= 2 && mapRef.current) {
       mapRef.current.fitToCoordinates(
         coords.map((c) => ({ latitude: c.lat, longitude: c.lng })),
         { edgePadding: { top: 60, right: 60, bottom: 60, left: 60 }, animated: true }
@@ -47,7 +44,7 @@ export default function RideMap({
         ref={mapRef}
         style={styles.map}
         provider={PROVIDER_GOOGLE}
-        initialRegion={DEFAULT_REGION}
+        initialRegion={JORDAN_REGION}
         showsUserLocation
         showsMyLocationButton
         onPress={(e) => onMapPress?.(e.nativeEvent.coordinate)}
@@ -55,23 +52,35 @@ export default function RideMap({
         {pickup && (
           <Marker
             coordinate={{ latitude: pickup.lat, longitude: pickup.lng }}
-            title={pickup.address || 'Pickup'}
+            title={pickup.address || pickupTitle}
             pinColor={COLORS.success}
           />
         )}
         {dropoff && (
           <Marker
             coordinate={{ latitude: dropoff.lat, longitude: dropoff.lng }}
-            title={dropoff.address || 'Dropoff'}
+            title={dropoff.address || dropoffTitle}
             pinColor={COLORS.error}
           />
         )}
         {driverLocation && (
-          <Marker
-            coordinate={{ latitude: driverLocation.lat, longitude: driverLocation.lng }}
+          <CarMarker
+            lat={driverLocation.lat}
+            lng={driverLocation.lng}
             title="Driver"
-            pinColor={COLORS.primary}
+            highlight
           />
+        )}
+        {nearbyDrivers.map((d) =>
+          d?.lat != null && d?.lng != null ? (
+            <CarMarker
+              key={d.driverId}
+              lat={d.lat}
+              lng={d.lng}
+              title={d.name || 'Driver'}
+              description={d.vehicleModel ? `${d.vehicleColor || ''} ${d.vehicleModel}` : undefined}
+            />
+          ) : null
         )}
         {showRoute && routeCoords.length === 2 && (
           <Polyline coordinates={routeCoords} strokeColor={COLORS.primary} strokeWidth={3} />

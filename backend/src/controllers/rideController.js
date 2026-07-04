@@ -1,11 +1,36 @@
 const rideService = require('../services/rideService');
-const { notifyRideStatus } = require('../services/notificationService');
+const { saveBase64Image } = require('../services/uploadService');
+const {
+  notifyRideStatus,
+  notifyBoxReceiver,
+} = require('../services/notificationService');
 
 async function create(req, res) {
   try {
-    const ride = await rideService.createRide(req.user.id, req.body);
-    req.app.get('io')?.emit('ride:requested', ride);
-    res.status(201).json(ride);
+    const { ride, matched, pendingApproval, external, trackingCode, trackingUrl } =
+      await rideService.createRide(req.user.id, req.body);
+    const io = req.app.get('io');
+
+    if (matched) {
+      // Rider joined an existing carpool
+      io?.to(`ride:${ride.id}`).emit('ride:updated', ride);
+    } else if (ride.status === 'REQUESTED') {
+      // New ride open for drivers to accept
+      io?.emit('ride:requested', ride);
+    }
+
+    if (pendingApproval && ride.receiverId) {
+      // Registered receiver: push + realtime request to their Receiver screen.
+      notifyBoxReceiver(ride);
+      io?.to(`user:${ride.receiverId}`).emit('box:request', ride);
+    }
+
+    res.status(201).json({
+      ...ride,
+      matched: !!matched,
+      // External receivers: tracking link only (SMS is a future TODO).
+      ...(external ? { external: true, trackingCode, trackingUrl } : {}),
+    });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
@@ -13,7 +38,7 @@ async function create(req, res) {
 
 async function list(req, res) {
   try {
-    const rides = await rideService.getUserRides(req.user.id, req.user.role);
+    const rides = await rideService.getUserRides(req.user.id, req.user.activeRole || req.user.role);
     res.json(rides);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
@@ -22,8 +47,27 @@ async function list(req, res) {
 
 async function getById(req, res) {
   try {
-    const ride = await rideService.getRideById(req.params.id, req.user.id, req.user.role);
+    const ride = await rideService.getRideById(
+      req.params.id,
+      req.user.id,
+      req.user.activeRole || req.user.role
+    );
     res.json(ride);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+async function nearby(req, res) {
+  try {
+    const lat = parseFloat(req.query.lat);
+    const lng = parseFloat(req.query.lng);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      return res.status(400).json({ error: 'lat and lng query params are required' });
+    }
+    const radius = req.query.radius ? parseFloat(req.query.radius) : undefined;
+    const drivers = await rideService.getNearbyDrivers(lat, lng, radius);
+    res.json({ drivers, radiusKm: radius || rideService.NEARBY_RADIUS_KM });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
@@ -32,8 +76,9 @@ async function getById(req, res) {
 async function accept(req, res) {
   try {
     const ride = await rideService.acceptRide(req.params.id, req.user.id);
-    req.app.get('io')?.to(`ride:${ride.id}`).emit('ride:updated', ride);
-    req.app.get('io')?.emit('ride:accepted', ride);
+    const io = req.app.get('io');
+    io?.to(`ride:${ride.id}`).emit('ride:updated', ride);
+    io?.emit('ride:accepted', ride);
     notifyRideStatus(ride, 'ACCEPTED');
     res.json(ride);
   } catch (err) {
@@ -47,12 +92,50 @@ async function updateStatus(req, res) {
     const ride = await rideService.updateRideStatus(
       req.params.id,
       req.user.id,
-      req.user.role,
+      req.user.activeRole || req.user.role,
       status
     );
     req.app.get('io')?.to(`ride:${ride.id}`).emit('ride:updated', ride);
     notifyRideStatus(ride, status);
     res.json(ride);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+async function approveBox(req, res) {
+  try {
+    const ride = await rideService.approveBoxDelivery(req.params.id, req.user.id, req.body);
+    const io = req.app.get('io');
+    io?.emit('ride:requested', ride);
+    io?.to(`ride:${ride.id}`).emit('ride:updated', ride);
+    notifyRideStatus(ride, 'REQUESTED');
+    res.json(ride);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+async function rejectBox(req, res) {
+  try {
+    const ride = await rideService.rejectBoxDelivery(req.params.id, req.user.id);
+    const io = req.app.get('io');
+    io?.to(`ride:${ride.id}`).emit('ride:updated', ride);
+    // Notify the sender their package was rejected.
+    io?.to(`user:${ride.riderId}`).emit('box:rejected', ride);
+    res.json(ride);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+async function uploadProof(req, res) {
+  try {
+    const { relativePath } = saveBase64Image(req.body.image, `pod-${req.params.id}`);
+    const url = `${req.protocol}://${req.get('host')}${relativePath}`;
+    const ride = await rideService.saveDeliveryProof(req.params.id, req.user.id, url);
+    req.app.get('io')?.to(`ride:${ride.id}`).emit('ride:updated', ride);
+    res.json({ url, ride });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
@@ -72,10 +155,12 @@ async function updateLocation(req, res) {
       lng: req.body.lng,
       rideId: activeRide?.id,
     };
+    const io = req.app.get('io');
     if (activeRide) {
-      req.app.get('io')?.to(`ride:${activeRide.id}`).emit('driver:location', payload);
+      io?.to(`ride:${activeRide.id}`).emit('driver:location', payload);
     }
-    req.app.get('io')?.emit('driver:location', payload);
+    // Fan out to nearby riders for the live-proximity map.
+    io?.emit('driver:location', payload);
     res.json(profile);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
@@ -88,6 +173,9 @@ async function updateAvailability(req, res) {
       req.user.id,
       req.body.isAvailable
     );
+    if (!req.body.isAvailable) {
+      req.app.get('io')?.emit('driver:offline', { driverId: req.user.id });
+    }
     res.json(profile);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
@@ -98,8 +186,12 @@ module.exports = {
   create,
   list,
   getById,
+  nearby,
   accept,
   updateStatus,
+  approveBox,
+  rejectBox,
+  uploadProof,
   updateLocation,
   updateAvailability,
 };
