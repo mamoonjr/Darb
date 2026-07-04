@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  RIDER
+  DRIVER
+  ADMIN
+}
+
+enum RideStatus {
+  REQUESTED
+  ACCEPTED
+  DRIVER_ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  phone     String   @unique
+  name      String
+  password  String
+  role      Role     @default(RIDER)
+  avatar    String?
+  pushToken String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  driverProfile DriverProfile?
+  ridesAsRider  Ride[]         @relation("RiderRides")
+  ridesAsDriver Ride[]         @relation("DriverRides")
+  reviewsGiven  Review[]       @relation("ReviewsGiven")
+}
+
+model DriverProfile {
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicleMake  String
+  vehicleModel String
+  vehiclePlate String
+  vehicleColor String
+  isAvailable  Boolean @default(false)
+  rating       Float   @default(5.0)
+  ratingCount  Int     @default(0)
+  lat          Float?
+  lng          Float?
+}
+
+model Ride {
+  id               String     @id @default(cuid())
+  riderId          String
+  rider            User       @relation("RiderRides", fields: [riderId], references: [id])
+  driverId         String?
+  driver           User?      @relation("DriverRides", fields: [driverId], references: [id])
+  status           RideStatus @default(REQUESTED)
+  pickupAddress    String
+  pickupLat        Float
+  pickupLng        Float
+  dropoffAddress   String
+  dropoffLat       Float
+  dropoffLng       Float
+  fare             Float?
+  distance         Float?
+  estimatedMinutes Int?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  completedAt      DateTime?
+
+  payment Payment?
+  review  Review?
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  rideId        String        @unique
+  ride          Ride          @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  amount        Float
+  status        PaymentStatus @default(PENDING)
+  provider      String        @default("mock")
+  transactionId String?
+  paymentMethod String?
+  createdAt     DateTime      @default(now())
+  paidAt        DateTime?
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rideId    String   @unique
+  ride      Ride     @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  riderId   String
+  rider     User     @relation("ReviewsGiven", fields: [riderId], references: [id])
+  driverId  String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+}

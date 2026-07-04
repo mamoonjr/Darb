@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@babel/code-frame": "^8.0.0",
+    "cloudflared": "^0.7.1"
+  }
+}

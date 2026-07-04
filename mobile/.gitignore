@@ -1,0 +1,8 @@
+node_modules/
+.expo/
+dist/
+.env
+.env.production
+.env.local
+google-play-service-account.json
+*.log
