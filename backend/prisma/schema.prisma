@@ -91,6 +91,35 @@ model User {
   joinRequests    JoinRequest[]
   wallet          Wallet?
   savedCards      SavedCard[]
+  refreshTokens   RefreshToken[]
+}
+
+/// Long-lived session credential (hashed). Access JWT stays short-lived.
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+/// Phone OTP challenge (hashed code). Never store plaintext.
+model OtpChallenge {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  purpose    String    @default("LOGIN")
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, purpose])
 }
 
 model DriverProfile {

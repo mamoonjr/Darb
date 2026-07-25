@@ -24,6 +24,9 @@ const {
   addCardSchema,
   rateRideSchema,
   pushTokenSchema,
+  requestOtpSchema,
+  verifyOtpSchema,
+  refreshTokenSchema,
 } = require('../validators/auth');
 
 const router = Router();
@@ -37,6 +40,10 @@ router.use('/v1', v1Routes);
 
 router.post('/auth/register', validate(registerSchema), authController.register);
 router.post('/auth/login', validate(loginSchema), authController.login);
+router.post('/auth/otp/request', validate(requestOtpSchema), authController.requestOtp);
+router.post('/auth/otp/verify', validate(verifyOtpSchema), authController.verifyOtp);
+router.post('/auth/refresh', validate(refreshTokenSchema), authController.refresh);
+router.post('/auth/logout', validate(refreshTokenSchema), authController.logout);
 router.get('/auth/me', authMiddleware, authController.me);
 router.post('/auth/switch-role', authMiddleware, validate(switchRoleSchema), authController.switchRole);
 

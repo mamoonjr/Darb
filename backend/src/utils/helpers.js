@@ -1,12 +1,30 @@
 const jwt = require('jsonwebtoken');
-const { jwtSecret } = require('../config');
+const {
+  jwtSecret,
+  jwtRefreshSecret,
+  accessTokenTtl,
+  refreshTokenTtl,
+} = require('../config');
 
+/** @deprecated Prefer signAccessToken — kept for call sites during Phase 4. */
 function signToken(payload) {
-  return jwt.sign(payload, jwtSecret, { expiresIn: '7d' });
+  return signAccessToken(payload);
+}
+
+function signAccessToken(payload) {
+  return jwt.sign(payload, jwtSecret, { expiresIn: accessTokenTtl });
+}
+
+function signRefreshToken(payload) {
+  return jwt.sign(payload, jwtRefreshSecret, { expiresIn: refreshTokenTtl });
 }
 
 function verifyToken(token) {
   return jwt.verify(token, jwtSecret);
+}
+
+function verifyRefreshToken(token) {
+  return jwt.verify(token, jwtRefreshSecret);
 }
 
 function sanitizeUser(user) {
@@ -121,7 +139,10 @@ function boundingBox(lat, lng, radiusKm) {
 
 module.exports = {
   signToken,
+  signAccessToken,
+  signRefreshToken,
   verifyToken,
+  verifyRefreshToken,
   sanitizeUser,
   phoneLookupVariants,
   normalizePhone,

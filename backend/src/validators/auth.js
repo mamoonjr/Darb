@@ -91,6 +91,19 @@ const pushTokenSchema = z.object({
   pushToken: z.string().min(1),
 });
 
+const requestOtpSchema = z.object({
+  phone: z.string().min(7),
+});
+
+const verifyOtpSchema = z.object({
+  phone: z.string().min(7),
+  code: z.string().min(4).max(8),
+});
+
+const refreshTokenSchema = z.object({
+  refreshToken: z.string().min(20),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -105,4 +118,7 @@ module.exports = {
   addCardSchema,
   rateRideSchema,
   pushTokenSchema,
+  requestOtpSchema,
+  verifyOtpSchema,
+  refreshTokenSchema,
 };

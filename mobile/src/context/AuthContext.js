@@ -17,8 +17,14 @@ export function AuthProvider({ children }) {
     try {
       const token = await api.getToken();
       if (token) {
-        const profile = await api.me();
-        setUser(profile);
+        try {
+          const profile = await api.me();
+          setUser(profile);
+        } catch {
+          await api.refreshSession();
+          const profile = await api.me();
+          setUser(profile);
+        }
         await connectSocket();
         registerForPushNotifications();
       }
@@ -30,43 +36,60 @@ export function AuthProvider({ children }) {
   }
 
   async function login(phone, password) {
-    const { user: profile, token } = await api.login({ phone, password });
-    await api.setToken(token);
-    setUser(profile);
+    const session = await api.login({ phone, password });
+    await api.setSession(session);
+    setUser(session.user);
     await connectSocket();
     registerForPushNotifications();
-    return profile;
+    return session.user;
+  }
+
+  async function loginWithOtp(phone, code) {
+    const session = await api.verifyOtp(phone, code);
+    await api.setSession(session);
+    setUser(session.user);
+    await connectSocket();
+    registerForPushNotifications();
+    return session.user;
   }
 
   async function register(data) {
-    const { user: profile, token } = await api.register(data);
-    await api.setToken(token);
-    setUser(profile);
+    const session = await api.register(data);
+    await api.setSession(session);
+    setUser(session.user);
     await connectSocket();
     registerForPushNotifications();
-    return profile;
+    return session.user;
   }
 
   async function logout() {
     disconnectSocket();
-    await api.clearToken();
+    await api.logout();
     setUser(null);
   }
 
-  // Switch active role (RIDER <-> DRIVER). The server returns a fresh token
-  // whose claims reflect the new active role, so we re-issue and reconnect.
   async function switchRole(role) {
-    const { user: profile, token } = await api.switchRole(role);
-    await api.setToken(token);
-    setUser(profile);
+    const session = await api.switchRole(role);
+    await api.setSession(session);
+    setUser(session.user);
     disconnectSocket();
     await connectSocket();
-    return profile;
+    return session.user;
   }
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, logout, setUser, switchRole }}
+      value={{
+        user,
+        loading,
+        login,
+        loginWithOtp,
+        register,
+        logout,
+        setUser,
+        switchRole,
+        requestOtp: api.requestOtp,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -1,18 +1,7 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/database');
-const { signToken, sanitizeUser, phoneLookupVariants, normalizePhone } = require('../utils/helpers');
-
-// The token's `role` claim always mirrors `activeRole` so existing
-// requireRole(...) guards keep working after a user switches roles.
-function tokenFor(user) {
-  return signToken({
-    id: user.id,
-    email: user.email,
-    role: user.activeRole,
-    activeRole: user.activeRole,
-    roles: user.roles,
-  });
-}
+const { sanitizeUser, phoneLookupVariants, normalizePhone } = require('../utils/helpers');
+const { issueSession } = require('./tokenService');
 
 async function register(data) {
   const existing = await prisma.user.findFirst({
@@ -24,7 +13,6 @@ async function register(data) {
 
   const hashed = await bcrypt.hash(data.password, 10);
   const primaryRole = data.role || 'RIDER';
-  // A driver can also act as a rider, so grant both roles up front.
   const roles = primaryRole === 'DRIVER' ? ['RIDER', 'DRIVER'] : [primaryRole];
 
   const user = await prisma.user.create({
@@ -50,7 +38,7 @@ async function register(data) {
     include: { driverProfile: true },
   });
 
-  return { user: sanitizeUser(user), token: tokenFor(user) };
+  return issueSession(user);
 }
 
 async function login(phone, password) {
@@ -67,7 +55,7 @@ async function login(phone, password) {
     throw Object.assign(new Error('Account suspended'), { status: 403 });
   }
 
-  return { user: sanitizeUser(user), token: tokenFor(user) };
+  return issueSession(user);
 }
 
 async function getProfile(userId) {
@@ -81,7 +69,6 @@ async function getProfile(userId) {
   return sanitizeUser(user);
 }
 
-// Switch the caller's active role. The user must already OWN the target role.
 async function switchRole(userId, targetRole) {
   if (!['RIDER', 'DRIVER'].includes(targetRole)) {
     throw Object.assign(new Error('Role must be RIDER or DRIVER'), { status: 400 });
@@ -107,7 +94,7 @@ async function switchRole(userId, targetRole) {
     include: { driverProfile: true },
   });
 
-  return { user: sanitizeUser(updated), token: tokenFor(updated) };
+  return issueSession(updated);
 }
 
 module.exports = { register, login, getProfile, switchRole };

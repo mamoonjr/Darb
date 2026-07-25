@@ -3,7 +3,7 @@
 **Status:** Complete  
 **Date:** 2026-07-25  
 **Prerequisite:** Phase 2 approved  
-**Next:** Phase 4 (auth hardening) **or** mobile carpool UI — awaiting approval
+**Next:** Phase 4 — see [PHASE_4_AUTH.md](./PHASE_4_AUTH.md)
 
 ---
 
