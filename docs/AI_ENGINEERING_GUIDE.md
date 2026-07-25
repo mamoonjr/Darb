@@ -668,6 +668,7 @@ If the answer is "No", do not implement it.
 # Related project docs
 
 - [ADR-001-carpool-first-freeze.md](./ADR-001-carpool-first-freeze.md) — accepted freeze / incremental migrate decision
-- [PHASE_0_INVENTORY.md](./PHASE_0_INVENTORY.md) — current API inventory and Uber-shaped hotspots
+- [PHASE_0_INVENTORY.md](./PHASE_0_INVENTORY.md) — Phase 0 API inventory and Uber-shaped hotspots
+- [PHASE_1_DOMAIN.md](./PHASE_1_DOMAIN.md) — Phase 1 domain language
 - [../AGENTS.md](../AGENTS.md) — agent entrypoint
 - `.cursor/rules/darb-ai-engineering.mdc` — always-on Cursor rule

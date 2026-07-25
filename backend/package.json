@@ -12,7 +12,8 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "node prisma/seed.js",
     "db:setup": "prisma generate && prisma migrate dev --name init && node prisma/seed.js",
-    "db:setup:prod": "prisma generate && prisma migrate deploy && node prisma/seed.js"
+    "db:setup:prod": "prisma generate && prisma migrate deploy && node prisma/seed.js",
+    "test:domain": "node src/domain/__tests__/runDomainChecks.js"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
