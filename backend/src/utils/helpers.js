@@ -14,6 +14,57 @@ function sanitizeUser(user) {
   return safe;
 }
 
+function normalizePhone(phone) {
+  const arabicIndic = '٠١٢٣٤٥٦٧٨٩';
+  const easternArabic = '۰۱۲۳۴۵۶۷۸۹';
+  let s = String(phone || '').trim().replace(/[\s\-()]/g, '');
+  s = [...s]
+    .map((ch) => {
+      const ai = arabicIndic.indexOf(ch);
+      if (ai >= 0) return String(ai);
+      const ea = easternArabic.indexOf(ch);
+      if (ea >= 0) return String(ea);
+      return ch;
+    })
+    .join('');
+  return s;
+}
+
+// Build common Jordan phone variants so login works with 079..., 962..., +962...
+function phoneLookupVariants(phone) {
+  const raw = normalizePhone(phone);
+  if (!raw) return [];
+
+  const variants = new Set([raw]);
+  const digits = raw.startsWith('+') ? raw.slice(1) : raw;
+
+  if (digits.startsWith('00')) variants.add(digits.slice(2));
+  if (digits.startsWith('0') && digits.length >= 10) {
+    variants.add(`962${digits.slice(1)}`);
+    variants.add(`+962${digits.slice(1)}`);
+  }
+  if (digits.startsWith('962')) {
+    variants.add(`+${digits}`);
+    variants.add(`0${digits.slice(3)}`);
+  }
+  if (!digits.startsWith('962') && !digits.startsWith('0')) {
+    variants.add(`962${digits}`);
+    variants.add(`+962${digits}`);
+  }
+  if (raw.startsWith('+')) variants.add(raw.slice(1));
+
+  return [...variants];
+}
+
+async function findUserByPhone(prisma, phone, select) {
+  const variants = phoneLookupVariants(phone);
+  for (const variant of variants) {
+    const user = await prisma.user.findUnique({ where: { phone: variant }, ...(select ? { select } : {}) });
+    if (user) return user;
+  }
+  return null;
+}
+
 function calculateFare(distanceKm) {
   const baseFare = 5;
   const perKm = 2.5;
@@ -72,6 +123,9 @@ module.exports = {
   signToken,
   verifyToken,
   sanitizeUser,
+  phoneLookupVariants,
+  normalizePhone,
+  findUserByPhone,
   calculateFare,
   calculateDistance,
   calculateBearing,

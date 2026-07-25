@@ -92,6 +92,22 @@ export const api = {
   searchUserByPhone: (phone) =>
     request(`/users/search?phone=${encodeURIComponent(phone)}`),
 
+  searchPlaces: (q, lang = 'ar', lat, lng) => {
+    let url = `/places/search?q=${encodeURIComponent(q)}&lang=${lang}`;
+    if (lat != null && lng != null) {
+      url += `&lat=${lat}&lng=${lng}`;
+    }
+    return request(url);
+  },
+
+  searchNearbyPlaces: (lat, lng, lang = 'ar') =>
+    request(`/places/nearby?lat=${lat}&lng=${lng}&lang=${lang}`),
+
+  getPlaceCategories: (lang = 'ar') => request(`/places/categories?lang=${lang}`),
+
+  reversePlace: (lat, lng, lang = 'ar') =>
+    request(`/places/reverse?lat=${lat}&lng=${lng}&lang=${lang}`),
+
   getNearbyDrivers: (lat, lng, radius) =>
     request(`/drivers/nearby?lat=${lat}&lng=${lng}${radius ? `&radius=${radius}` : ''}`),
 
@@ -125,6 +141,15 @@ export const api = {
     request(`/rides/${id}/pay`, { method: 'POST', body: JSON.stringify({ paymentMethod }) }),
 
   getPayment: (id) => request(`/rides/${id}/payment`),
+
+  getWallet: () => request('/wallet'),
+  getWalletTransactions: () => request('/wallet/transactions'),
+  topUpWallet: (amount) =>
+    request('/wallet/top-up', { method: 'POST', body: JSON.stringify({ amount }) }),
+  getCards: () => request('/cards'),
+  addCard: (body) => request('/cards', { method: 'POST', body: JSON.stringify(body) }),
+  deleteCard: (id) => request(`/cards/${id}`, { method: 'DELETE' }),
+  setDefaultCard: (id) => request(`/cards/${id}/default`, { method: 'PATCH' }),
 
   rateRide: (id, body) =>
 

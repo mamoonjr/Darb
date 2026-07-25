@@ -76,12 +76,34 @@ async function notifyDriverRideOffer(driverId, ride, distanceKm) {
   );
 }
 
+async function notifyBoxRejected(ride) {
+  await notifyUser(ride.riderId, {
+    title: 'رفض المستلم الطرد',
+    body: `${ride.receiver?.name || 'المستلم'} رفض استلام الطرد.`,
+    data: { rideId: ride.id, type: 'BOX_REJECTED' },
+  });
+}
+
+async function notifyBoxCancelled(ride, cancelledByReceiver = false) {
+  if (!ride.receiverId) return;
+  await notifyUser(ride.receiverId, {
+    title: 'تم إلغاء الطرد',
+    body: cancelledByReceiver
+      ? 'تم إلغاء طلب التوصيل.'
+      : `ألغى ${ride.rider?.name || 'المُرسِل'} طلب التوصيل.`,
+    data: { rideId: ride.id, type: 'BOX_CANCELLED' },
+  });
+}
+
 async function notifyRideStatus(ride, status) {
   const msg = RIDE_MESSAGES[status];
   if (!msg) return;
 
   const recipients = [ride.riderId];
   if (ride.driverId) recipients.push(ride.driverId);
+  if (ride.receiverId && ride.rideType === 'BOX_DELIVERY') {
+    recipients.push(ride.receiverId);
+  }
 
   const prisma = require('../config/database');
   const users = await prisma.user.findMany({
@@ -105,5 +127,7 @@ module.exports = {
   notifyUser,
   notifyRideStatus,
   notifyBoxReceiver,
+  notifyBoxRejected,
+  notifyBoxCancelled,
   notifyDriverRideOffer,
 };

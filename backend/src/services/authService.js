@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/database');
-const { signToken, sanitizeUser } = require('../utils/helpers');
+const { signToken, sanitizeUser, phoneLookupVariants, normalizePhone } = require('../utils/helpers');
 
 // The token's `role` claim always mirrors `activeRole` so existing
 // requireRole(...) guards keep working after a user switches roles.
@@ -53,9 +53,11 @@ async function register(data) {
   return { user: sanitizeUser(user), token: tokenFor(user) };
 }
 
-async function login(email, password) {
-  const user = await prisma.user.findUnique({
-    where: { email },
+async function login(phone, password) {
+  const normalized = normalizePhone(phone);
+  const variants = phoneLookupVariants(normalized);
+  const user = await prisma.user.findFirst({
+    where: { phone: { in: variants } },
     include: { driverProfile: true },
   });
   if (!user || !(await bcrypt.compare(password, user.password))) {

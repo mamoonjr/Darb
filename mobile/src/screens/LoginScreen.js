@@ -4,20 +4,27 @@ import { useTranslation } from 'react-i18next';
 import { Button, Input, Screen } from '../components/UI';
 import { COLORS } from '../constants';
 import { useAuth } from '../context/AuthContext';
+import { normalizePhone } from '../utils/phone';
 
 export default function LoginScreen({ navigation }) {
   const { t } = useTranslation();
   const { login } = useAuth();
-  const [email, setEmail] = useState('rider@darb.app');
-  const [password, setPassword] = useState('password123');
+  const [phone, setPhone] = useState('0790000001');
+  const [password, setPassword] = useState('12345');
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
     setLoading(true);
     try {
-      await login(email, password);
+      await login(normalizePhone(phone), password);
     } catch (err) {
-      Alert.alert(t('error'), err.message);
+      const msg =
+        err.message === 'Invalid credentials'
+          ? t('invalidCredentials')
+          : err.message === 'Network request failed' || err.message === 'Request failed'
+            ? t('networkError')
+            : err.message;
+      Alert.alert(t('error'), msg);
     } finally {
       setLoading(false);
     }
@@ -30,7 +37,13 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.tagline}>{t('tagline')}</Text>
       </View>
 
-      <Input label={t('email')} value={email} onChangeText={setEmail} keyboardType="email-address" />
+      <Input
+        label={t('phone')}
+        value={phone}
+        onChangeText={setPhone}
+        keyboardType="phone-pad"
+        placeholder={t('phonePlaceholder')}
+      />
       <Input label={t('password')} value={password} onChangeText={setPassword} secureTextEntry />
 
       <Button title={t('login')} onPress={handleLogin} loading={loading} style={styles.btn} />

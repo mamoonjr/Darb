@@ -32,9 +32,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <Screen>
-      <Text style={[styles.title, { textAlign }]}>{t('profile')}</Text>
-
-      <Card>
+      <Card style={styles.profileCard}>
         <Text style={[styles.name, { textAlign }]}>{user?.name}</Text>
         <Text style={[styles.meta, { textAlign }]}>{user?.email}</Text>
         <Text style={[styles.meta, { textAlign }]}>{user?.phone}</Text>
@@ -78,8 +76,8 @@ export default function ProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '700', color: COLORS.text, marginBottom: 24 },
-  name: { fontSize: 22, fontWeight: '700', color: COLORS.text },
+  profileCard: { marginBottom: 12 },
+  name: { fontSize: 22, fontWeight: '800', color: COLORS.text },
   meta: { fontSize: 14, color: COLORS.textSecondary, marginTop: 4 },
   role: { fontSize: 14, color: COLORS.primary, fontWeight: '600', marginTop: 8 },
   label: { fontSize: 12, color: COLORS.textSecondary, marginBottom: 8 },

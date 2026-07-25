@@ -13,6 +13,27 @@ export const JORDAN_REGION = {
   longitudeDelta: 0.3,
 };
 
+// Home map viewport — tighter zoom on Amman.
+export const JORDAN_HOME_REGION = {
+  latitude: 31.9522,
+  longitude: 35.9106,
+  latitudeDelta: 0.1,
+  longitudeDelta: 0.1,
+};
+
+export const AIRPORT_DROPOFF = {
+  lat: 31.7225,
+  lng: 35.9933,
+  address: 'مطار الملكة علياء الدولي، عمان',
+};
+
+export const RIDE_TIERS = [
+  { id: 'XPRESS', labelKey: 'darbXpress', multiplier: 1.25, icon: '⚡' },
+  { id: 'ECONOMY', labelKey: 'darbEconomy', multiplier: 1, icon: '🚗' },
+];
+
+export const CURRENCY = 'JOD';
+
 export const RIDE_TYPES = {
   SINGLE: 'SINGLE',
   CARPOOL: 'CARPOOL',

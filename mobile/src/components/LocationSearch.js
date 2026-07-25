@@ -10,15 +10,27 @@ import {
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../constants';
 import { useLanguage } from '../context/LanguageContext';
-import { placeDetails, searchPlaces } from '../services/places';
+import { resolvePlace, searchPlaces } from '../services/places';
 
-export default function LocationSearch({ label, selectedAddress, placeholder, onSelect }) {
+export default function LocationSearch({
+  variant = 'pickup',
+  selectedAddress,
+  placeholder,
+  onSelect,
+  onShareLocation,
+  onMapPress,
+  showShareBanner = false,
+}) {
   const { t } = useTranslation();
-  const { textAlign } = useLanguage();
+  const { textAlign, row, isRTL } = useLanguage();
   const [query, setQuery] = useState(selectedAddress || '');
   const [suggestions, setSuggestions] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const debounceRef = useRef(null);
+
+  const isPickup = variant === 'pickup';
+  const defaultPlaceholder = isPickup ? t('enterPickupLocation') : t('enterDropoffLocation');
 
   useEffect(() => {
     setQuery(selectedAddress || '');
@@ -43,7 +55,7 @@ export default function LocationSearch({ label, selectedAddress, placeholder, on
       } finally {
         setSearching(false);
       }
-    }, 400);
+    }, 350);
   }
 
   async function pickSuggestion(item) {
@@ -55,7 +67,7 @@ export default function LocationSearch({ label, selectedAddress, placeholder, on
         setQuery(item.description);
         return;
       }
-      const details = await placeDetails(item.placeId);
+      const details = await resolvePlace(item);
       if (details) {
         onSelect(details);
         setQuery(details.address);
@@ -65,20 +77,40 @@ export default function LocationSearch({ label, selectedAddress, placeholder, on
     }
   }
 
+  async function handleShareLocation() {
+    if (!onShareLocation) return;
+    setSharing(true);
+    try {
+      await onShareLocation();
+    } finally {
+      setSharing(false);
+    }
+  }
+
   return (
     <View style={styles.wrap}>
-      {label ? <Text style={[styles.label, { textAlign }]}>{label}</Text> : null}
-      <TextInput
-        style={[styles.input, { textAlign }]}
-        value={query}
-        onChangeText={handleChange}
-        placeholder={placeholder || t('searchLocation')}
-        placeholderTextColor={COLORS.textSecondary}
-        returnKeyType="search"
-      />
+      <View style={[styles.searchRow, row]}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={[styles.input, { textAlign }]}
+          value={query}
+          onChangeText={handleChange}
+          placeholder={placeholder || defaultPlaceholder}
+          placeholderTextColor={COLORS.textSecondary}
+          returnKeyType="search"
+        />
+        {onMapPress ? (
+          <TouchableOpacity style={styles.mapChip} onPress={onMapPress}>
+            <Text style={styles.mapChipIcon}>📍</Text>
+            <Text style={styles.mapChipText}>{t('onMap')}</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
       {searching ? (
         <ActivityIndicator size="small" color={COLORS.primary} style={styles.loader} />
       ) : null}
+
       {suggestions.length > 0 && (
         <View style={styles.list}>
           {suggestions.map((item, index) => (
@@ -87,6 +119,7 @@ export default function LocationSearch({ label, selectedAddress, placeholder, on
               style={styles.item}
               onPress={() => pickSuggestion(item)}
             >
+              <Text style={styles.itemPin}>📍</Text>
               <Text style={[styles.itemText, { textAlign }]} numberOfLines={2}>
                 {item.description}
               </Text>
@@ -94,41 +127,108 @@ export default function LocationSearch({ label, selectedAddress, placeholder, on
           ))}
         </View>
       )}
+
       {!searching && query.trim().length >= 2 && suggestions.length === 0 ? (
         <Text style={[styles.hint, { textAlign }]}>{t('noLocationResults')}</Text>
+      ) : null}
+
+      {showShareBanner && isPickup && onShareLocation ? (
+        <View style={styles.banner}>
+          <View style={[styles.bannerContent, row]}>
+            <View style={styles.bannerTextWrap}>
+              <Text style={[styles.bannerTitle, { textAlign }]}>{t('avoidPickupConfusion')}</Text>
+              <TouchableOpacity
+                style={styles.shareBtn}
+                onPress={handleShareLocation}
+                disabled={sharing}
+              >
+                {sharing ? (
+                  <ActivityIndicator size="small" color={COLORS.text} />
+                ) : (
+                  <Text style={styles.shareBtnText}>{t('shareLocation')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.bannerWarn}>{isRTL ? '⚠️' : '⚠️'}</Text>
+          </View>
+        </View>
       ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { marginBottom: 12 },
-  label: { fontSize: 14, color: COLORS.textSecondary, marginBottom: 6 },
-  input: {
+  wrap: { marginBottom: 14 },
+  searchRow: {
+    alignItems: 'center',
     backgroundColor: COLORS.surface,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    gap: 8,
+  },
+  searchIcon: { fontSize: 18, opacity: 0.55 },
+  input: {
+    flex: 1,
     fontSize: 16,
     color: COLORS.text,
+    paddingVertical: 10,
+    minHeight: 44,
   },
+  mapChip: {
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  mapChipIcon: { fontSize: 14 },
+  mapChipText: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '600', marginTop: 2 },
   loader: { marginTop: 8 },
   list: {
     marginTop: 8,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
     backgroundColor: COLORS.surface,
   },
   item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  itemText: { fontSize: 14, color: COLORS.text },
+  itemPin: { fontSize: 16 },
+  itemText: { flex: 1, fontSize: 14, color: COLORS.text },
   hint: { fontSize: 13, color: COLORS.textSecondary, marginTop: 8 },
+  banner: {
+    marginTop: 12,
+    backgroundColor: '#FFE082',
+    borderRadius: 14,
+    padding: 14,
+  },
+  bannerContent: { alignItems: 'center', justifyContent: 'space-between' },
+  bannerTextWrap: { flex: 1 },
+  bannerTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 10 },
+  shareBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  shareBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.text },
+  bannerWarn: { fontSize: 42, marginHorizontal: 8 },
 });

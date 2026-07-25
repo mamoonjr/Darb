@@ -3,6 +3,8 @@ const { saveBase64Image } = require('../services/uploadService');
 const {
   notifyRideStatus,
   notifyBoxReceiver,
+  notifyBoxRejected,
+  notifyBoxCancelled,
 } = require('../services/notificationService');
 
 async function create(req, res) {
@@ -20,7 +22,7 @@ async function create(req, res) {
 
     if (pendingApproval && ride.receiverId) {
       // Registered receiver: push + realtime request to their Receiver screen.
-      notifyBoxReceiver(ride);
+      await notifyBoxReceiver(ride);
       io?.to(`user:${ride.receiverId}`).emit('box:request', ride);
     }
 
@@ -95,8 +97,15 @@ async function updateStatus(req, res) {
       req.user.activeRole || req.user.role,
       status
     );
-    req.app.get('io')?.to(`ride:${ride.id}`).emit('ride:updated', ride);
-    notifyRideStatus(ride, status);
+    const io = req.app.get('io');
+    io?.to(`ride:${ride.id}`).emit('ride:updated', ride);
+    if (status === 'CANCELLED' && ride.rideType === 'BOX_DELIVERY' && ride.receiverId) {
+      await notifyBoxCancelled(ride, ride.receiverId === req.user.id);
+      io?.to(`user:${ride.receiverId}`).emit('box:cancelled', ride);
+      io?.to(`user:${ride.riderId}`).emit('box:cancelled', ride);
+    } else {
+      await notifyRideStatus(ride, status);
+    }
     res.json(ride);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
@@ -144,8 +153,8 @@ async function rejectBox(req, res) {
     const ride = await rideService.rejectBoxDelivery(req.params.id, req.user.id);
     const io = req.app.get('io');
     io?.to(`ride:${ride.id}`).emit('ride:updated', ride);
-    // Notify the sender their package was rejected.
     io?.to(`user:${ride.riderId}`).emit('box:rejected', ride);
+    await notifyBoxRejected(ride);
     res.json(ride);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });

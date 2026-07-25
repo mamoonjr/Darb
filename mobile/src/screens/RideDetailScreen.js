@@ -121,7 +121,7 @@ export default function RideDetailScreen({ route, navigation }) {
       const updated = await api.approveBox(rideId, {
         lat: loc.lat,
         lng: loc.lng,
-        address: reverseGeocode(loc.lat, loc.lng),
+        address: await reverseGeocode(loc.lat, loc.lng),
       });
       setRide(updated);
       Alert.alert(t('thanks'), t('boxApproved'));
@@ -305,8 +305,17 @@ export default function RideDetailScreen({ route, navigation }) {
         <Button title={t('completeRide')} onPress={() => handleAction('COMPLETED')} loading={loading} />
       )}
 
-      {isRider && ['REQUESTED', 'ACCEPTED', 'DRIVER_ARRIVED'].includes(ride.status) && (
-        <Button title={t('cancelRide')} variant="outline" onPress={() => handleAction('CANCELLED')} loading={loading} style={styles.gap} />
+      {isRider &&
+        ['PENDING_RECEIVER_APPROVAL', 'REQUESTED', 'ACCEPTED', 'DRIVER_ARRIVED'].includes(
+          ride.status
+        ) && (
+        <Button
+          title={t('cancelRide')}
+          variant="outline"
+          onPress={() => handleAction('CANCELLED')}
+          loading={loading}
+          style={styles.gap}
+        />
       )}
 
       {ride.status === 'COMPLETED' && (

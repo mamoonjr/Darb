@@ -3,8 +3,10 @@ const authController = require('../controllers/authController');
 const rideController = require('../controllers/rideController');
 const paymentController = require('../controllers/paymentController');
 const reviewController = require('../controllers/reviewController');
+const walletController = require('../controllers/walletController');
 const adminController = require('../controllers/adminController');
 const userController = require('../controllers/userController');
+const placesController = require('../controllers/placesController');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const {
@@ -17,6 +19,8 @@ const {
   updateLocationSchema,
   updateAvailabilitySchema,
   paymentSchema,
+  topUpSchema,
+  addCardSchema,
   rateRideSchema,
   pushTokenSchema,
 } = require('../validators/auth');
@@ -34,6 +38,11 @@ router.post('/auth/switch-role', authMiddleware, validate(switchRoleSchema), aut
 
 router.patch('/users/push-token', authMiddleware, validate(pushTokenSchema), userController.updatePushToken);
 router.get('/users/search', authMiddleware, userController.searchByPhone);
+
+router.get('/places/search', authMiddleware, placesController.search);
+router.get('/places/nearby', authMiddleware, placesController.nearby);
+router.get('/places/categories', authMiddleware, placesController.categories);
+router.get('/places/reverse', authMiddleware, placesController.reverse);
 
 router.get('/drivers/nearby', authMiddleware, rideController.nearby);
 router.get('/drivers/requests', authMiddleware, requireRole('DRIVER'), rideController.incomingRequests);
@@ -54,6 +63,14 @@ router.get('/drivers/:driverId/reviews', authMiddleware, reviewController.driver
 
 router.patch('/driver/location', authMiddleware, requireRole('DRIVER'), validate(updateLocationSchema), rideController.updateLocation);
 router.patch('/driver/availability', authMiddleware, requireRole('DRIVER'), validate(updateAvailabilitySchema), rideController.updateAvailability);
+
+router.get('/wallet', authMiddleware, walletController.getWallet);
+router.get('/wallet/transactions', authMiddleware, walletController.getTransactions);
+router.post('/wallet/top-up', authMiddleware, validate(topUpSchema), walletController.topUp);
+router.get('/cards', authMiddleware, walletController.listCards);
+router.post('/cards', authMiddleware, validate(addCardSchema), walletController.addCard);
+router.delete('/cards/:id', authMiddleware, walletController.deleteCard);
+router.patch('/cards/:id/default', authMiddleware, walletController.setDefaultCard);
 
 router.get('/admin/stats', authMiddleware, requireRole('ADMIN'), adminController.stats);
 router.get('/admin/users', authMiddleware, requireRole('ADMIN'), adminController.users);

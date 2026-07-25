@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
 import { api } from '../services/api';
 import { emitDriverLocation, getSocket } from '../services/socket';
+import i18n from '../i18n';
 
 export function useDriverLocationTracking(rideId, enabled) {
   const subscription = useRef(null);
@@ -43,8 +44,6 @@ export function useDriverLocationTracking(rideId, enabled) {
   }, [rideId, enabled]);
 }
 
-// Broadcasts an online driver's location (every ~4s) even when not on a ride,
-// so nearby riders can see them on the live-proximity map.
 export function useDriverPresence(enabled) {
   const subscription = useRef(null);
 
@@ -98,6 +97,37 @@ export async function getCurrentLocation() {
   };
 }
 
-export function reverseGeocode(lat, lng) {
+function formatExpoAddress(entry) {
+  const parts = [
+    entry.name,
+    entry.street,
+    entry.district,
+    entry.subregion,
+    entry.city,
+    entry.region,
+    entry.country,
+  ]
+    .map((p) => (p ? String(p).trim() : ''))
+    .filter(Boolean);
+  return [...new Set(parts)].join('، ');
+}
+
+export async function reverseGeocode(lat, lng) {
+  try {
+    const results = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+    const formatted = results?.map(formatExpoAddress).find(Boolean);
+    if (formatted) return formatted;
+  } catch {
+    // device geocoder unavailable
+  }
+
+  try {
+    const lang = i18n.language === 'en' ? 'en' : 'ar';
+    const { address } = await api.reversePlace(lat, lng, lang);
+    if (address) return address;
+  } catch {
+    // backend fallback failed
+  }
+
   return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 }

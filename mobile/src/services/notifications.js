@@ -31,6 +31,11 @@ export async function registerForPushNotifications() {
       name: 'Ride Updates',
       importance: Notifications.AndroidImportance.HIGH,
     });
+    await Notifications.setNotificationChannelAsync('box', {
+      name: 'Darb Box',
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+    });
   }
 
   let token;

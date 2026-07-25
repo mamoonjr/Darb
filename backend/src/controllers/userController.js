@@ -1,4 +1,5 @@
 const prisma = require('../config/database');
+const { findUserByPhone, normalizePhone } = require('../utils/helpers');
 
 async function updatePushToken(req, res) {
   try {
@@ -17,14 +18,16 @@ async function updatePushToken(req, res) {
 // flags them as an external (unregistered) user.
 async function searchByPhone(req, res) {
   try {
-    const phone = String(req.query.phone || '').trim();
+    const phone = normalizePhone(req.query.phone || '');
     if (phone.length < 4) {
       return res.status(400).json({ error: 'phone query is required' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { phone },
-      select: { id: true, name: true, phone: true, avatar: true },
+    const user = await findUserByPhone(prisma, phone, {
+      id: true,
+      name: true,
+      phone: true,
+      avatar: true,
     });
 
     if (!user) {

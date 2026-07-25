@@ -36,6 +36,12 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum WalletTransactionType {
+  TOP_UP
+  RIDE_PAYMENT
+  REFUND
+}
+
 model User {
   id         String   @id @default(cuid())
   email      String   @unique
@@ -55,8 +61,10 @@ model User {
   ridesAsRider    Ride[]          @relation("RiderRides")
   ridesAsDriver   Ride[]          @relation("DriverRides")
   ridesAsReceiver Ride[]          @relation("ReceiverRides")
-  reviewsGiven    Review[]        @relation("ReviewsGiven")
+  reviewsGiven    Review[]          @relation("ReviewsGiven")
   ridePassengers  RidePassenger[]
+  wallet          Wallet?
+  savedCards      SavedCard[]
 }
 
 model DriverProfile {
@@ -156,4 +164,38 @@ model Review {
   rating    Int
   comment   String?
   createdAt DateTime @default(now())
+}
+
+model Wallet {
+  id           String              @id @default(cuid())
+  userId       String              @unique
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance      Float               @default(0)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  transactions WalletTransaction[]
+}
+
+model WalletTransaction {
+  id          String                @id @default(cuid())
+  walletId    String
+  wallet      Wallet                @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type        WalletTransactionType
+  amount      Float
+  description String?
+  rideId      String?
+  createdAt   DateTime              @default(now())
+}
+
+model SavedCard {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  last4       String
+  brand       String
+  expiryMonth Int
+  expiryYear  Int
+  holderName  String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
 }

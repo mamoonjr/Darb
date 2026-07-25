@@ -4,7 +4,7 @@ const registerSchema = z.object({
   email: z.string().email(),
   phone: z.string().min(8),
   name: z.string().min(2),
-  password: z.string().min(6),
+  password: z.string().min(5),
   role: z.enum(['RIDER', 'DRIVER']).optional(),
   vehicleMake: z.string().optional(),
   vehicleModel: z.string().optional(),
@@ -13,7 +13,7 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  phone: z.string().min(7),
   password: z.string().min(1),
 });
 
@@ -66,7 +66,20 @@ const updateAvailabilitySchema = z.object({
 });
 
 const paymentSchema = z.object({
-  paymentMethod: z.enum(['card', 'apple_pay', 'mada']).optional(),
+  paymentMethod: z.enum(['card', 'apple_pay', 'mada', 'wallet']).optional(),
+});
+
+const topUpSchema = z.object({
+  amount: z.number().positive().max(500),
+  description: z.string().max(200).optional(),
+});
+
+const addCardSchema = z.object({
+  cardNumber: z.string().min(13).max(19),
+  holderName: z.string().min(2).max(80),
+  expiryMonth: z.number().int().min(1).max(12),
+  expiryYear: z.number().int().min(2024).max(2040),
+  isDefault: z.boolean().optional(),
 });
 
 const rateRideSchema = z.object({
@@ -88,6 +101,8 @@ module.exports = {
   updateLocationSchema,
   updateAvailabilitySchema,
   paymentSchema,
+  topUpSchema,
+  addCardSchema,
   rateRideSchema,
   pushTokenSchema,
 };

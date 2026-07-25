@@ -44,7 +44,7 @@ export default function ReceiverRequestsScreen() {
       await api.approveBox(rideId, {
         lat: loc.lat,
         lng: loc.lng,
-        address: reverseGeocode(loc.lat, loc.lng),
+        address: await reverseGeocode(loc.lat, loc.lng),
       });
       Alert.alert(t('thanks'), t('boxApproved'));
       load();

@@ -171,10 +171,10 @@ npm run dev
 
 | الدور | البريد | كلمة المرور |
 |-------|--------|-------------|
-| 🧍 راكب | `rider@darb.app` | `password123` |
-| 🚕 سائق | `driver@darb.app` | `password123` |
-| 🚕 سائق ٢ | `driver2@darb.app` | `password123` |
-| 🛠️ مدير | `admin@darb.app` | `password123` |
+| 🧍 راكب | `rider@darb.app` | `12345` |
+| 🚕 سائق | `driver@darb.app` | `12345` |
+| 🚕 سائق ٢ | `driver2@darb.app` | `12345` |
+| 🛠️ مدير | `admin@darb.app` | `12345` |
 
 > السائقون يملكون دورَي `RIDER` و`DRIVER` لتجربة تبديل الأدوار.
 

@@ -27,7 +27,15 @@ async function processPayment(rideId, userId, paymentMethod) {
   }
 
   const amount = ride.fare || 0;
-  const transactionId = await chargeGateway(amount, paymentMethod);
+  let transactionId;
+
+  if (paymentMethod === 'wallet') {
+    const walletService = require('./walletService');
+    await walletService.deductForRide(userId, rideId, amount);
+    transactionId = `wallet_${Date.now()}`;
+  } else {
+    transactionId = await chargeGateway(amount, paymentMethod);
+  }
 
   return prisma.payment.upsert({
     where: { rideId },

@@ -7,6 +7,7 @@ const {
   bearingDiff,
   estimateMinutes,
   boundingBox,
+  findUserByPhone,
 } = require('../utils/helpers');
 const paymentService = require('./paymentService');
 
@@ -230,7 +231,11 @@ async function createBoxDelivery(riderId, data) {
     throw Object.assign(new Error('Receiver phone is required'), { status: 400 });
   }
 
-  const receiver = await prisma.user.findUnique({ where: { phone: data.receiverPhone } });
+  const receiver = await findUserByPhone(prisma, data.receiverPhone, {
+    id: true,
+    name: true,
+    phone: true,
+  });
   const external = !receiver;
 
   if (external && (data.dropoffLat == null || data.dropoffLng == null)) {
@@ -266,7 +271,7 @@ async function createBoxDelivery(riderId, data) {
       totalSeats: 1,
       availableSeats: 0,
       receiverId: receiver?.id || null,
-      receiverPhone: data.receiverPhone,
+      receiverPhone: receiver?.phone || data.receiverPhone,
       receiverName: data.receiverName || receiver?.name || null,
       packageDesc: data.packageDesc || null,
     },

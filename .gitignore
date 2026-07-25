@@ -14,12 +14,20 @@ google-play-service-account.json
 # Expo / React Native
 .expo/
 .expo-shared/
+.expo-tmp-*/
+mobile/.expo-tmp-export/
+mobile/.expo-tmp-ios/
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
 *.orig.*
+
+# Local QR / tunnel artifacts
+expo-qr.png
+qr.png
+tunnel-*.log
 
 # Build output
 dist/
