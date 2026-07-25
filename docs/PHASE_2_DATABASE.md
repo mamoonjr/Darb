@@ -3,7 +3,7 @@
 **Status:** Complete  
 **Date:** 2026-07-25  
 **Prerequisite:** Phase 1 approved  
-**Next:** Phase 3 — carpool HTTP APIs (`/api/v1/...`) — awaiting approval
+**Next:** Phase 3 — see [PHASE_3_API.md](./PHASE_3_API.md)
 
 ---
 

@@ -7,6 +7,7 @@ const walletController = require('../controllers/walletController');
 const adminController = require('../controllers/adminController');
 const userController = require('../controllers/userController');
 const placesController = require('../controllers/placesController');
+const v1Routes = require('./v1');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const {
@@ -30,6 +31,9 @@ const router = Router();
 router.get('/health', (_req, res) => {
   res.json({ status: 'ok', app: 'Darb API', version: '2.0.0' });
 });
+
+/** Route-carpool APIs (Phase 3) — envelope { success, message, data } */
+router.use('/v1', v1Routes);
 
 router.post('/auth/register', validate(registerSchema), authController.register);
 router.post('/auth/login', validate(loginSchema), authController.login);
