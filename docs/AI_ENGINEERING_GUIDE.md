@@ -662,3 +662,12 @@ Every engineering decision must answer:
 "Will this make Darb easier to maintain and scale over the next five years?"
 
 If the answer is "No", do not implement it.
+
+---
+
+# Related project docs
+
+- [ADR-001-carpool-first-freeze.md](./ADR-001-carpool-first-freeze.md) — accepted freeze / incremental migrate decision
+- [PHASE_0_INVENTORY.md](./PHASE_0_INVENTORY.md) — current API inventory and Uber-shaped hotspots
+- [../AGENTS.md](../AGENTS.md) — agent entrypoint
+- `.cursor/rules/darb-ai-engineering.mdc` — always-on Cursor rule

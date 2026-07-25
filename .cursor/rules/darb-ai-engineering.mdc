@@ -1,0 +1,62 @@
+---
+description: Darb AI Engineering Guide SSOT — carpool MVP, architecture, and AI workflow
+alwaysApply: true
+---
+
+# Darb — Mandatory AI Rules
+
+Read and obey `docs/AI_ENGINEERING_GUIDE.md` (Single Source of Truth). Do not violate it unless the user explicitly overrides it.
+
+## Product identity
+
+Darb is a **Route-Based Carpool Platform**, NOT Uber/Careem/taxi.
+
+- Drivers publish real routes; the route is never modified by passengers.
+- Passengers select only predefined landmarks (origin/destination/existing landmarks).
+- Price is proposed **after** a join request — never at ride creation by the driver.
+
+## MVP lock
+
+Success metric until done: **one driver + multiple passengers complete a shared ride**.
+
+Until that end-to-end flow works, do **not** add extra features.
+
+## AI workflow (required)
+
+1. Analyze  
+2. Plan  
+3. Explain  
+4. Implement (only after plan / approval when required)  
+5. Verify  
+6. Document  
+7. **Wait** — never continue automatically into the next phase
+
+## Architecture
+
+Prefer Clean Architecture / DDD / SOLID / Repository / DI.
+
+Business logic must **not** live in controllers, UI, widgets, or raw API handlers — put it in Application/Domain layers (or the nearest existing service layer while migrating).
+
+## Ride aggregate
+
+All rules center on **Ride**: Driver, Vehicle, Route, Landmarks, Members, Join Requests, Ratings, Notifications.
+
+## Lifecycles
+
+- Ride: Draft → Published → Receiving Requests → Confirmed → Started → Completed → Rated → Closed  
+- Join: Requested → Price Proposed → Passenger Accepted → Confirmed (or Rejected / Cancelled)
+
+## UI / Map
+
+- Maps first (~60% of Ride Details)
+- RTL + LTR
+- No free map picking in MVP for passengers — landmarks only
+
+## Git / DoD
+
+- One logical change per commit (`feat|fix|refactor|docs|test|perf|build|ci`)
+- Done only if: requirements, tests, docs, no duplicate logic, clean build, production-ready intent
+
+## Forbidden
+
+Do not delete architecture, rewrite large parts, skip tests/docs, duplicate business logic, or change public APIs without explanation and approval.
