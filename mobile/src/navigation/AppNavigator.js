@@ -15,6 +15,9 @@ import MyRidesScreen from '../screens/MyRidesScreen';
 import PaymentScreen from '../screens/PaymentScreen';
 import PlaceholderScreen from '../screens/PlaceholderScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import PublishRouteScreen from '../screens/PublishRouteScreen';
+import RouteRideDetailScreen from '../screens/RouteRideDetailScreen';
+import RouteRidesScreen from '../screens/RouteRidesScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import WalletScreen from '../screens/WalletScreen';
 import ReceiverRequestsScreen from '../screens/ReceiverRequestsScreen';
@@ -157,6 +160,9 @@ function MainStack() {
     >
       <Stack.Screen name="Home" component={DrawerHome} options={{ headerShown: false }} />
       <Stack.Screen name="RideDetail" component={RideDetailScreen} options={{ title: t('activeRide') }} />
+      <Stack.Screen name="RouteRides" component={RouteRidesScreen} options={{ title: t('carpoolBrowseRoutes') }} />
+      <Stack.Screen name="RouteRideDetail" component={RouteRideDetailScreen} options={{ title: t('carpoolRouteRide') }} />
+      <Stack.Screen name="PublishRoute" component={PublishRouteScreen} options={{ title: t('carpoolPublish') }} />
       <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: t('payment') }} />
       <Stack.Screen
         name="ReceiverRequests"

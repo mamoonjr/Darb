@@ -3,7 +3,7 @@
 **Status:** Complete  
 **Date:** 2026-07-25  
 **Prerequisite:** Phase 3  
-**Next:** Phase 5+ ride lifecycle polish **or** mobile carpool UI (Phases 9–13) — awaiting approval
+**Next:** Mobile carpool UI — see [PHASE_MOBILE_CARPOOL.md](./PHASE_MOBILE_CARPOOL.md)
 
 ---
 

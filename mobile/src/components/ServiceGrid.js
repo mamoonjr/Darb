@@ -5,10 +5,10 @@ import { COLORS } from '../constants';
 import { useLanguage } from '../context/LanguageContext';
 
 const SERVICES = [
+  { id: 'carpool', labelKey: 'serviceCarpool', icon: '🛣️' },
   { id: 'ride', labelKey: 'serviceRide', icon: '🚗' },
   { id: 'airport', labelKey: 'serviceAirport', icon: '✈️' },
   { id: 'send', labelKey: 'serviceSend', icon: '📦' },
-  { id: 'receive', labelKey: 'serviceReceive', icon: '📥' },
 ];
 
 export default function ServiceGrid({ onSelect }) {

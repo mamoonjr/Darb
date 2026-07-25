@@ -113,6 +113,19 @@ export default function HomeDriverPanel({
               style={[styles.mainBtn, isAvailable && styles.offlineBtn]}
             />
 
+            <Button
+              title={t('carpoolPublish')}
+              onPress={() => navigation.getParent()?.navigate('PublishRoute')}
+              style={styles.mainBtn}
+            />
+
+            <Button
+              title={t('carpoolBrowseRoutes')}
+              variant="outline"
+              onPress={() => navigation.getParent()?.navigate('RouteRides')}
+              style={styles.mainBtn}
+            />
+
             {isAvailable && (
               <Card style={[styles.incomingCard, accentBorder]}>
                 <Text style={[styles.section, { textAlign }]}>

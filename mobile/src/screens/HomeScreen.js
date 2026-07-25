@@ -232,6 +232,10 @@ export default function HomeScreen({ navigation }) {
   }, [pickup, dropoff, tierMultiplier]);
 
   function handleServiceSelect(serviceId) {
+    if (serviceId === 'carpool') {
+      stackNav?.navigate('RouteRides');
+      return;
+    }
     if (serviceId === 'receive') {
       stackNav?.navigate('ReceiverRequests');
       return;

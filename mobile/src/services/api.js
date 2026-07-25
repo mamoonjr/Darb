@@ -74,12 +74,27 @@ async function request(path, options = {}, allowRetry = true) {
   }
 
   if (!response.ok) {
-    const err = new Error(data.error || 'Request failed');
+    const err = new Error(data.error || data.message || 'Request failed');
     if (data.code) err.code = data.code;
+    if (data.data?.code) err.code = data.data.code;
     throw err;
   }
 
   return data;
+}
+
+/** /api/v1 carpool envelope: { success, message, data } */
+async function requestV1(path, options = {}) {
+  const payload = await request(`/v1${path}`, options);
+  if (payload && typeof payload.success === 'boolean') {
+    if (!payload.success) {
+      const err = new Error(payload.message || 'Request failed');
+      if (payload.data?.code) err.code = payload.data.code;
+      throw err;
+    }
+    return payload.data;
+  }
+  return payload;
 }
 
 export const api = {
@@ -173,4 +188,27 @@ export const api = {
     request('/driver/location', { method: 'PATCH', body: JSON.stringify({ lat, lng }) }),
   updateDriverAvailability: (isAvailable) =>
     request('/driver/availability', { method: 'PATCH', body: JSON.stringify({ isAvailable }) }),
+
+  // Route-based carpool (/api/v1)
+  listRouteRides: () => requestV1('/rides'),
+  getRouteRide: (id) => requestV1(`/rides/${id}`),
+  publishRouteRide: (body) =>
+    requestV1('/rides', { method: 'POST', body: JSON.stringify(body) }),
+  openRouteRideRequests: (id) =>
+    requestV1(`/rides/${id}/open-requests`, { method: 'POST', body: '{}' }),
+  joinRouteRide: (id, body) =>
+    requestV1(`/rides/${id}/join`, { method: 'POST', body: JSON.stringify(body) }),
+  proposeJoinPrice: (joinId, amount) =>
+    requestV1(`/join-requests/${joinId}/propose-price`, {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    }),
+  acceptJoinPrice: (joinId) =>
+    requestV1(`/join-requests/${joinId}/accept-price`, { method: 'POST', body: '{}' }),
+  rejectJoinRequest: (joinId) =>
+    requestV1(`/join-requests/${joinId}/reject`, { method: 'POST', body: '{}' }),
+  startRouteRide: (id) =>
+    requestV1(`/rides/${id}/start`, { method: 'POST', body: '{}' }),
+  completeRouteRide: (id) =>
+    requestV1(`/rides/${id}/complete`, { method: 'POST', body: '{}' }),
 };
