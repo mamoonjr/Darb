@@ -19,7 +19,9 @@ enum RideType {
   BOX_DELIVERY
 }
 
+/// Marketplace (taxi) + route-carpool statuses (additive).
 enum RideStatus {
+  // Legacy marketplace / box
   PENDING_RECEIVER_APPROVAL
   REQUESTED
   ACCEPTED
@@ -27,6 +29,14 @@ enum RideStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+  // Route-based carpool (SSOT Phase 2+)
+  DRAFT
+  PUBLISHED
+  RECEIVING_REQUESTS
+  CONFIRMED
+  STARTED
+  RATED
+  CLOSED
 }
 
 enum PaymentStatus {
@@ -40,6 +50,21 @@ enum WalletTransactionType {
   TOP_UP
   RIDE_PAYMENT
   REFUND
+}
+
+enum JoinRequestStatus {
+  REQUESTED
+  PRICE_PROPOSED
+  PASSENGER_ACCEPTED
+  CONFIRMED
+  REJECTED
+  CANCELLED
+}
+
+/// Distinguishes taxi marketplace trips from driver-published route rides.
+enum RideProduct {
+  MARKETPLACE
+  ROUTE_CARPOOL
 }
 
 model User {
@@ -61,8 +86,9 @@ model User {
   ridesAsRider    Ride[]          @relation("RiderRides")
   ridesAsDriver   Ride[]          @relation("DriverRides")
   ridesAsReceiver Ride[]          @relation("ReceiverRides")
-  reviewsGiven    Review[]          @relation("ReviewsGiven")
+  reviewsGiven    Review[]        @relation("ReviewsGiven")
   ridePassengers  RidePassenger[]
+  joinRequests    JoinRequest[]
   wallet          Wallet?
   savedCards      SavedCard[]
 }
@@ -83,26 +109,31 @@ model DriverProfile {
 }
 
 model Ride {
-  id               String     @id @default(cuid())
-  riderId          String
-  rider            User       @relation("RiderRides", fields: [riderId], references: [id])
+  id               String       @id @default(cuid())
+  /// Optional for ROUTE_CARPOOL (driver-owned). Required for MARKETPLACE creates.
+  riderId          String?
+  rider            User?        @relation("RiderRides", fields: [riderId], references: [id])
   driverId         String?
-  driver           User?      @relation("DriverRides", fields: [driverId], references: [id])
-  rideType         RideType   @default(SINGLE)
-  status           RideStatus @default(REQUESTED)
-  pickupAddress    String
-  pickupLat        Float
-  pickupLng        Float
-  dropoffAddress   String
-  dropoffLat       Float
-  dropoffLng       Float
+  driver           User?        @relation("DriverRides", fields: [driverId], references: [id])
+  rideType         RideType     @default(SINGLE)
+  product          RideProduct  @default(MARKETPLACE)
+  status           RideStatus   @default(REQUESTED)
+  /// Marketplace A→B (optional when route + landmarks define the path)
+  pickupAddress    String?
+  pickupLat        Float?
+  pickupLng        Float?
+  dropoffAddress   String?
+  dropoffLat       Float?
+  dropoffLng       Float?
   fare             Float?
   distance         Float?
   estimatedMinutes Int?
 
-  // Carpooling
+  // Seats / capacity
   totalSeats     Int @default(1)
   availableSeats Int @default(1)
+  /// Explicit capacity for route-carpool (defaults to totalSeats when null)
+  vehicleCapacity Int?
 
   // Darb Box (package delivery)
   receiverId       String?
@@ -116,9 +147,65 @@ model Ride {
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
 
-  payment    Payment?
-  review     Review?
-  passengers RidePassenger[]
+  payment      Payment?
+  review       Review?
+  passengers   RidePassenger[]
+  route        Route?
+  joinRequests JoinRequest[]
+}
+
+model Route {
+  id          String     @id @default(cuid())
+  rideId      String     @unique
+  ride        Ride       @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  summary     String?
+  /// Optional encoded polyline / GeoJSON from routing engine (Phase 7)
+  polyline    Json?
+  distanceKm  Float?
+  durationMin Int?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  landmarks   Landmark[]
+}
+
+model Landmark {
+  id        String   @id @default(cuid())
+  routeId   String
+  route     Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  name      String
+  address   String?
+  lat       Float
+  lng       Float
+  sequence  Int
+  createdAt DateTime @default(now())
+
+  joinsAsOrigin      JoinRequest[] @relation("JoinOrigin")
+  joinsAsDestination JoinRequest[] @relation("JoinDestination")
+
+  @@index([routeId, sequence])
+}
+
+model JoinRequest {
+  id                   String            @id @default(cuid())
+  rideId               String
+  ride                 Ride              @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  passengerId          String
+  passenger            User              @relation(fields: [passengerId], references: [id])
+  originLandmarkId     String
+  originLandmark       Landmark          @relation("JoinOrigin", fields: [originLandmarkId], references: [id])
+  destinationLandmarkId String
+  destinationLandmark  Landmark          @relation("JoinDestination", fields: [destinationLandmarkId], references: [id])
+  seats                Int               @default(1)
+  status               JoinRequestStatus @default(REQUESTED)
+  proposedPrice        Float?
+  proposedAt           DateTime?
+  decidedAt            DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@index([rideId, status])
+  @@index([passengerId, status])
+  @@unique([rideId, passengerId])
 }
 
 model RidePassenger {
